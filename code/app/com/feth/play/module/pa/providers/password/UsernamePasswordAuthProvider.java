@@ -105,7 +105,7 @@ public abstract class UsernamePasswordAuthProvider<R, UL extends UsernamePasswor
 		} else if (payload == Case.LOGIN) {
 			final L login = getLogin(context);
 			final UL authUser = buildLoginAuthUser(login, context);
-			final LoginResult r = loginUser(authUser);
+			final LoginResult r = loginUser(authUser, context);
 			switch (r) {
 			case USER_UNVERIFIED:
 				// The email of the user is not verified, yet - we won't allow
@@ -246,7 +246,7 @@ public abstract class UsernamePasswordAuthProvider<R, UL extends UsernamePasswor
 	
 	protected abstract US buildSignupAuthUser(final S signup, final Context ctx);
 
-	protected abstract LoginResult loginUser(final UL authUser);
+	protected abstract LoginResult loginUser(final UL authUser, final Context ctx);
 
 	protected abstract SignupResult signupUser(final US user);
 
