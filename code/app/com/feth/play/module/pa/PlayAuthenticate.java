@@ -190,7 +190,7 @@ public abstract class PlayAuthenticate {
 			if (expires != AuthUser.NO_EXPIRATION) {
 			    boolean expired = (new Date()).getTime() < expires; // and the session
 															// expires after now
-                Logger.info(String.format("Session expired check %s::%d::%d::%s", session.get(USER_KEY), expires, System.currentTimeMillis(), expired));
+                Logger.debug(String.format("Session expired check %s::%d::%d::%s", session.get(USER_KEY), expires, System.currentTimeMillis(), expired));
 			    ret &= expired;
 			}
 		}
@@ -200,7 +200,7 @@ public abstract class PlayAuthenticate {
             final long lastAccess = getLastAccess(session);
             if (lastAccess != AuthUser.NO_EXPIRATION) {
                 boolean active = System.currentTimeMillis() - lastAccess < getMaxInactivityTime();
-                Logger.info(String.format("Session last access %s::%d::%d::%d::%s", session.get(USER_KEY), lastAccess, (System.currentTimeMillis() - lastAccess), getMaxInactivityTime(), active));
+                Logger.debug(String.format("Session last access %s::%d::%d::%d::%s", session.get(USER_KEY), lastAccess, (System.currentTimeMillis() - lastAccess), getMaxInactivityTime(), active));
                 
                 if (!active) {
                     logout(session);
@@ -211,7 +211,7 @@ public abstract class PlayAuthenticate {
 
         // no matter what, update the last access time
         session.put(LAST_ACCESS_KEY, Long.toString(System.currentTimeMillis()));
-        Logger.info("isLoggedIn returned " + ret);
+        Logger.debug("isLoggedIn returned " + ret);
 
 		return ret;
 	}
