@@ -26,7 +26,8 @@ public abstract class PlayAuthenticate {
 	private static final String SETTING_KEY_ACCOUNT_MERGE_ENABLED = "accountMergeEnabled";
 	private static final String SETTING_KEY_ACCOUNT_AUTO_LINK = "accountAutoLink";
 	private static final String SETTING_KEY_ACCOUNT_AUTO_MERGE = "accountAutoMerge";
-
+    private static final String SETTING_KEY_SESSION_INACTIVITY_MAX = "sessionMaxInactivityMinutes";
+	
 	public abstract static class Resolver {
 
 		/**
@@ -124,6 +125,7 @@ public abstract class PlayAuthenticate {
 	private static final String USER_KEY = "pa.u.id";
 	private static final String PROVIDER_KEY = "pa.p.id";
 	private static final String EXPIRES_KEY = "pa.u.exp";
+    private static final String LAST_ACCESS_KEY = "pa.u.lacc";
 	private static final String SESSION_ID_KEY = "pa.s.id";
 
 	public static Configuration getConfiguration() {
@@ -186,10 +188,31 @@ public abstract class PlayAuthenticate {
 			// expiration is set
 			final long expires = getExpiration(session);
 			if (expires != AuthUser.NO_EXPIRATION) {
-				ret &= (new Date()).getTime() < expires; // and the session
+			    boolean expired = (new Date()).getTime() < expires; // and the session
 															// expires after now
+                Logger.info(String.format("Session expired check %s::%d::%d::%s", session.get(USER_KEY), expires, System.currentTimeMillis(), expired));
+			    ret &= expired;
 			}
 		}
+		
+        if (session.containsKey(LAST_ACCESS_KEY)) {
+            // last activity timing is set
+            final long lastAccess = getLastAccess(session);
+            if (lastAccess != AuthUser.NO_EXPIRATION) {
+                boolean active = System.currentTimeMillis() - lastAccess < getMaxInactivityTime();
+                Logger.info(String.format("Session last access %s::%d::%d::%d::%s", session.get(USER_KEY), lastAccess, (System.currentTimeMillis() - lastAccess), getMaxInactivityTime(), active));
+                
+                if (!active) {
+                    logout(session);
+                }
+                ret &= active;
+            }
+        }
+
+        // no matter what, update the last access time
+        session.put(LAST_ACCESS_KEY, Long.toString(System.currentTimeMillis()));
+        Logger.info("isLoggedIn returned " + ret);
+
 		return ret;
 	}
 
@@ -228,6 +251,20 @@ public abstract class PlayAuthenticate {
 		return expires;
 	}
 
+    private static long getLastAccess(final Session session) {
+        long access;
+        if (session.containsKey(LAST_ACCESS_KEY)) {
+            try {
+                access = Long.parseLong(session.get(LAST_ACCESS_KEY));
+            } catch (final NumberFormatException nfe) {
+                access = AuthUser.NO_EXPIRATION;
+            }
+        } else {
+            access = AuthUser.NO_EXPIRATION;
+        }
+        return access;
+    }
+
 	public static AuthUser getUser(final Session session) {
 		final String provider = session.get(PROVIDER_KEY);
 		final String id = session.get(USER_KEY);
@@ -255,6 +292,10 @@ public abstract class PlayAuthenticate {
 	public static boolean isAccountMergeEnabled() {
 		return getConfiguration().getBoolean(SETTING_KEY_ACCOUNT_MERGE_ENABLED);
 	}
+
+    public static int getMaxInactivityTime() {
+        return getConfiguration().getInt(SETTING_KEY_SESSION_INACTIVITY_MAX, 15) * 60 * 1000;
+    }
 
 	private static String getPlayAuthSessionId(final Session session) {
 		// Generate a unique id
